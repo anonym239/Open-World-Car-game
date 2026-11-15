@@ -104,14 +104,14 @@ Mass Traffic Processors ─► LOD 0 (≤ 60 m): volle Raycast-Physik (gleicher 
 
 ```mermaid
 flowchart LR
-    A[Pfad < 8 Punkte?] -->|ja| B[An nächster Kreuzung: geradeaus 60 %, links 20 %, rechts 20 %<br/>Bezier-Kurve durch Spur-Schnittpunkt]
+    A["Pfad < 8 Punkte?"] -->|ja| B[An nächster Kreuzung: geradeaus 60 %, links 20 %, rechts 20 %<br/>Bezier-Kurve durch Spur-Schnittpunkt]
     A --> C[Lookahead-Punkt l_d = 5 + 0,45 v]
     C --> D[Pure-Pursuit-Lenkwinkel]
     C --> E[Zieltempo = min Reise / Kurve / Ampel / Hindernis / Stopp-Anforderung]
-    E --> F{Ampel rot oder gelb mit d > 9 m?}
-    F -->|ja| G[Bremskurve √(2·3,2·(d−1,5))]
+    E --> F{"Ampel rot oder gelb mit d > 9 m?"}
+    F -->|ja| G["Bremskurve √(2·3,2·(d−1,5))"]
     E --> H[2 Raycasts nach vorn, Länge 4 + 1,4 v]
-    H --> I[Limit = 1,1·(d − 2,5)]
+    H --> I["Limit = 1,1·(d − 2,5)"]
     E --> J[P-Regler: Gas / Bremse / Haltebremse]
 ```
 

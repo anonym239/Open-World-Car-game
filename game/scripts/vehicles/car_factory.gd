@@ -186,9 +186,23 @@ static func validate_profiles() -> Array[String]:
 			errors.append("Profil %s nicht triangulierbar (Selbstüberschneidung?)" % SPECS[type]["name"])
 		var s: Dictionary = SPECS[type]
 		var arch_top := Vehicle.STATIC_COMP - float(s["rest"]) + float(s["wheel_r"]) + 0.05
-		if arch_top > float(s["hood_h"]) - 0.08:
-			errors.append("Radhaus von %s ragt in die Haube (%.2f > %.2f)" % [s["name"], arch_top, float(s["hood_h"]) - 0.08])
+		# Oberkante = Profilpunkte 1..6 (Nase -> Heck); Höhe über beiden Achsen interpolieren
+		for axle in [float(s["axle_f"]), float(s["axle_r"])]:
+			var top_y := _top_height(p, axle)
+			if arch_top + 0.03 > top_y:
+				errors.append("Radhaus von %s zu hoch bei z=%.2f (%.3f + 0.03 > %.3f)" % [s["name"], axle, arch_top, top_y])
 	return errors
+
+
+static func _top_height(p: PackedVector2Array, z: float) -> float:
+	for i in range(1, 6):
+		var a := p[i]
+		var b := p[i + 1]
+		if (z >= a.x and z <= b.x) or (z >= b.x and z <= a.x):
+			if is_equal_approx(a.x, b.x):
+				return maxf(a.y, b.y)
+			return lerpf(a.y, b.y, clampf((z - a.x) / (b.x - a.x), 0.0, 1.0))
+	return -INF
 
 
 static func _body_mesh(type: int, taxi: bool) -> ArrayMesh:
