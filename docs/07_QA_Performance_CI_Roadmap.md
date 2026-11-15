@@ -7,8 +7,8 @@
 | Gate | Prüfung | Werkzeug | Status im Prototyp |
 |---|---|---|---|
 | G1 Kompilierung | Alle Skripte und Shader kompilieren | `tools/ci_import.sh` (Import + Validierung im Spielkontext mit Autoloads) | ✅ aktiv |
-| G2 Gameplay-Smoke | Laufen, Einsteigen, Fahren, Driften, Bremsen, Aussteigen, KI-Stopp, Car-Jacking mit Fahrerauswurf, Absprung, Wetter, Nacht, Streaming, Passanten, Physik-Integrität (NaN/Out-of-Bounds) | `scripts/tests/smoke_test.gd` headless, `--fixed-fps 60` (deterministische Simulationszeit) | ✅ aktiv |
-| G3 Rendering | Shader im echten Vulkan-Mobile-Pfad, 4 Referenzszenen, Bildstatistik (Mittelwert/Streuung gegen schwarze/leere Frames) | `scripts/tests/render_test.gd` + Software-Vulkan (lavapipe) + Xvfb | ✅ aktiv, Screenshots als Artefakt |
+| G2 Gameplay-Smoke | Karosserie-Profile (Triangulierbarkeit, Radhaus-Freigang), Laufen, Einsteigen, Fahren, Driften, Bremsen, Aussteigen, KI-Stopp, Car-Jacking mit Fahrerauswurf, Absprung, Wetter, Nacht, Streaming, Passanten, Physik-Integrität (NaN/Out-of-Bounds) | `scripts/tests/smoke_test.gd` headless, `--fixed-fps 60` (deterministische Simulationszeit) | ✅ aktiv |
+| G3 Rendering | Shader im echten Vulkan-Mobile-Pfad, 5 Referenzszenen (inkl. Fahrzeug-Nahaufnahme), JPEG-Vorschau im Log, Bildstatistik (Mittelwert/Streuung gegen schwarze/leere Frames) | `scripts/tests/render_test.gd` + Software-Vulkan (lavapipe) + Xvfb | ✅ aktiv, Screenshots als Artefakt |
 | G4 APK | Export, Signaturprüfung (`apksigner verify`), Paket-Metadaten (`aapt2 dump badging`) | GitHub Actions | ✅ aktiv |
 | G5 Performance (Produktion) | Frame-Zeit-Perzentile auf Gerätefarm (P50/P95/P99), Thermik-Kurve 20 min | Firebase Test Lab / AWS Device Farm + Perfetto/Unreal Insights | geplant |
 | G6 Visuelle Regression (Produktion) | SSIM gegen Golden Images pro Szene ≥ 0,97 | Render-Test-Erweiterung | geplant |
