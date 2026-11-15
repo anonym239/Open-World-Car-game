@@ -40,6 +40,11 @@ func _shot(name: String) -> void:
 	var mean := lum / maxf(float(n), 1.0)
 	var stdev := sqrt(maxf(lum2 / maxf(float(n), 1.0) - mean * mean, 0.0))
 	print("[RENDER] %s -> %s  mean=%.3f stdev=%.3f size=%dx%d" % [name, path, mean, stdev, img.get_width(), img.get_height()])
+	# Kompakte Vorschau ins Log (CI-Sichtprüfung ohne Artefakt-Download)
+	var thumb := img.duplicate() as Image
+	thumb.resize(320, 180, Image.INTERPOLATE_BILINEAR)
+	var jpg := thumb.save_jpg_to_buffer(0.7)
+	print("[THUMB] %s %s" % [name, Marshalls.raw_to_base64(jpg)])
 
 
 func _run() -> void:

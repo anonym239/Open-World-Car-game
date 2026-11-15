@@ -227,7 +227,8 @@ func _parking_local(side: int, t: float) -> Vector3:
 
 
 func _plan_parking() -> void:
-	var count := _rng.randi_range(0, 3) if _tier > 0 else _rng.randi_range(0, 1)
+	# Dichte bewusst niedrig: jedes Auto kostet ~6 Draw-Calls (Karosserie, Tür, 4 Räder)
+	var count := _rng.randi_range(0, 2) if _tier >= 2 else _rng.randi_range(0, 1)
 	var used := {}
 	for i in count:
 		var side: int = _rng.randi_range(0, 3)
