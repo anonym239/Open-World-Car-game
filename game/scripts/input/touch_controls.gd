@@ -68,6 +68,11 @@ func _ready() -> void:
 	_layout()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED or what == NOTIFICATION_VISIBILITY_CHANGED:
+		_release_all()
+
+
 func _add(id: StringName, label: String, m: int) -> Widget:
 	var w := Widget.new()
 	w.id = id
@@ -187,14 +192,16 @@ func _stick_used() -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	var touch := event as InputEventScreenTouch
+	if touch != null and not touch.pressed:
+		# Loslassen IMMER verarbeiten (auch wenn ausgeblendet), sonst bleiben
+		# Buttons/Pedale nach Sequenzen oder Menüs "hängen".
+		_on_up(touch.index)
+		return
 	if not is_visible_in_tree():
 		return
-	var touch := event as InputEventScreenTouch
 	if touch != null:
-		if touch.pressed:
-			_on_down(touch.index, touch.position)
-		else:
-			_on_up(touch.index)
+		_on_down(touch.index, touch.position)
 		return
 	var drag := event as InputEventScreenDrag
 	if drag != null:

@@ -42,7 +42,7 @@ func _shot(name: String) -> void:
 	print("[RENDER] %s -> %s  mean=%.3f stdev=%.3f size=%dx%d" % [name, path, mean, stdev, img.get_width(), img.get_height()])
 	# Kompakte Vorschau ins Log (CI-Sichtprüfung ohne Artefakt-Download)
 	var thumb := img.duplicate() as Image
-	thumb.resize(320, 180, Image.INTERPOLATE_BILINEAR)
+	thumb.resize(480, 270, Image.INTERPOLATE_BILINEAR)
 	var jpg := thumb.save_jpg_to_buffer(0.7)
 	print("[THUMB] %s %s" % [name, Marshalls.raw_to_base64(jpg)])
 
@@ -91,5 +91,20 @@ func _run() -> void:
 	main.weather.set_kind(WeatherSystem.Kind.CLOUDY, true)
 	await _frames(120)
 	await _shot("04_morning_cinematic")
+
+	# Nahaufnahme: aussteigen, Auto von der Seite (3/4-Ansicht) bei Mittag
+	if car != null and player.carjack.is_driving():
+		InputHub.press(&"enter")
+		for i in 300:
+			if player.is_on_foot():
+				break
+			await get_tree().process_frame
+		main.env_ctrl.set_hour(12.0)
+		GameConfig.fixed_hour = 12.0
+		main.weather.set_kind(WeatherSystem.Kind.CLEAR, true)
+		cam.yaw = car.global_rotation.y - PI * 0.5 + 0.55
+		cam.pitch = -0.28
+		await _frames(60)
+		await _shot("05_car_closeup_noon")
 	print("RENDER TEST DONE")
 	get_tree().quit(0)

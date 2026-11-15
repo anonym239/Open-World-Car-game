@@ -94,7 +94,7 @@ Für alle Modi gilt fahrzeugseitig: **geschwindigkeitsabhängiger Maximal-Lenkwi
 
 | Element | Größe | Position | Verhalten |
 |---|---|---|---|
-| **Bewegungs-Stick** | r = 95 px | erscheint am Aufsetzpunkt (linke 42 % der Breite, unter dem oberen Viertel) | Deadzone 12 %, Basis folgt bei Überzug; Ausschlag → Gehen (0,5 m/s) … Joggen (4,6 m/s) |
+| **Bewegungs-Stick** | r = 95 px | erscheint am Aufsetzpunkt (linke 42 % der Breite, unter dem oberen Viertel) | Deadzone 12 %, Basis folgt bei Überzug; Ausschlag → Gehen (1,0 m/s) … Joggen (4,6 m/s) |
 | **Kamera** | gesamte rechte Hälfte (außer Buttons) | – | Wischen: 0,0042 rad/px × Empfindlichkeit; Pitch −72°…+34°; Invertier-Option |
 | **Schlag** | Ø 136 px | Daumen-Ruheposition | Tap (Cooldown 0,45 s) |
 | **Sprung** | Ø 96 px | links unten vom Schlag | Tap |
