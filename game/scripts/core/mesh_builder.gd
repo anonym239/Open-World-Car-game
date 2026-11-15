@@ -179,6 +179,8 @@ func extrude_profile(profile: PackedVector2Array, half_width: float, insets: Pac
 		quad(left[i], left[j], right[j], right[i], n)
 	# Seitendeckel
 	var idx := Geometry2D.triangulate_polygon(profile)
+	if idx.is_empty():
+		push_error("MeshBuilder.extrude_profile: Profil nicht triangulierbar (%d Punkte)" % count)
 	for k in range(0, idx.size(), 3):
 		var a := idx[k]
 		var b := idx[k + 1]

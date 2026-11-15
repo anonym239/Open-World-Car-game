@@ -57,6 +57,9 @@ func _run() -> void:
 		return
 	if not _check(main.starter_car != null, "starter car spawned"):
 		return
+	var profile_errors := CarFactory.validate_profiles()
+	if not _check(profile_errors.is_empty(), "car body profiles valid %s" % str(profile_errors)):
+		return
 
 	# 1) Laufen
 	var p0 := player.global_position

@@ -10,9 +10,9 @@ const SPECS := {
 		"cowl_z": -0.72, "roof_front": -0.18, "roof_rear": 0.82, "roof_h": 0.86, "deck_z": 1.42, "deck_h": 0.38,
 		"tail_h": 0.3, "wheel_r": 0.34, "rest": 0.30, "axle_f": -1.38, "axle_r": 1.38, "track": 0.8,
 		"mass": 1400.0, "engine": 8800.0, "max_speed": 52.0, "grip": 1.25, "drive_front": 0.0},
-	Type.SPORT: {"name": "Sportwagen", "hl": 2.2, "hw": 0.95, "bottom": -0.3, "nose_h": 0.0, "hood_h": 0.2,
-		"cowl_z": -0.55, "roof_front": -0.05, "roof_rear": 0.65, "roof_h": 0.6, "deck_z": 1.45, "deck_h": 0.3,
-		"tail_h": 0.25, "wheel_r": 0.35, "rest": 0.26, "axle_f": -1.35, "axle_r": 1.35, "track": 0.84,
+	Type.SPORT: {"name": "Sportwagen", "hl": 2.2, "hw": 0.95, "bottom": -0.3, "nose_h": 0.04, "hood_h": 0.3,
+		"cowl_z": -0.55, "roof_front": -0.05, "roof_rear": 0.65, "roof_h": 0.66, "deck_z": 1.45, "deck_h": 0.36,
+		"tail_h": 0.3, "wheel_r": 0.35, "rest": 0.26, "axle_f": -1.35, "axle_r": 1.35, "track": 0.84,
 		"mass": 1300.0, "engine": 12500.0, "max_speed": 66.0, "grip": 1.42, "drive_front": 0.0},
 	Type.SUV: {"name": "SUV", "hl": 2.35, "hw": 0.97, "bottom": -0.38, "nose_h": 0.2, "hood_h": 0.45,
 		"cowl_z": -0.85, "roof_front": -0.35, "roof_rear": 1.55, "roof_h": 1.05, "deck_z": 2.05, "deck_h": 0.55,
@@ -154,6 +154,43 @@ static func _arch(zc: float, yc: float, ra: float, bottom: float) -> PackedVecto
 	return points
 
 
+## Seitenprofil des Unterbaus (z, y) inkl. Radhäuser.
+static func body_profile(type: int) -> PackedVector2Array:
+	var s: Dictionary = SPECS[type]
+	var hl: float = s["hl"]
+	var bottom: float = s["bottom"]
+	var yc := Vehicle.STATIC_COMP - float(s["rest"])
+	var ra := float(s["wheel_r"]) + 0.05
+	var p := PackedVector2Array()
+	p.append(Vector2(-hl, bottom + 0.08))
+	p.append(Vector2(-hl - 0.02, s["nose_h"]))
+	p.append(Vector2(-hl + 0.22, float(s["hood_h"]) - 0.04))
+	p.append(Vector2(s["cowl_z"], s["hood_h"]))
+	p.append(Vector2(s["deck_z"], s["deck_h"]))
+	p.append(Vector2(hl - 0.18, float(s["deck_h"]) - 0.03))
+	p.append(Vector2(hl, s["tail_h"]))
+	p.append(Vector2(hl, bottom + 0.08))
+	p.append(Vector2(hl - 0.12, bottom))
+	p.append_array(_arch(s["axle_r"], yc, ra, bottom))
+	p.append_array(_arch(s["axle_f"], yc, ra, bottom))
+	p.append(Vector2(-hl + 0.12, bottom))
+	return p
+
+
+## Prüft alle Karosserieprofile (CI): Triangulierbarkeit + Radhaus unter der Haube.
+static func validate_profiles() -> Array[String]:
+	var errors: Array[String] = []
+	for type in SPECS.keys():
+		var p := body_profile(type)
+		if Geometry2D.triangulate_polygon(p).is_empty():
+			errors.append("Profil %s nicht triangulierbar (Selbstüberschneidung?)" % SPECS[type]["name"])
+		var s: Dictionary = SPECS[type]
+		var arch_top := Vehicle.STATIC_COMP - float(s["rest"]) + float(s["wheel_r"]) + 0.05
+		if arch_top > float(s["hood_h"]) - 0.08:
+			errors.append("Radhaus von %s ragt in die Haube (%.2f > %.2f)" % [s["name"], arch_top, float(s["hood_h"]) - 0.08])
+	return errors
+
+
 static func _body_mesh(type: int, taxi: bool) -> ArrayMesh:
 	var key := type * 10 + (1 if taxi else 0)
 	if _body_cache.has(key):
@@ -171,26 +208,10 @@ static func _body_mesh(type: int, taxi: bool) -> ArrayMesh:
 	var deck_z: float = s["deck_z"]
 	var deck_h: float = s["deck_h"]
 	var tail_h: float = s["tail_h"]
-	var wr: float = s["wheel_r"]
-	var rest: float = s["rest"]
-	var yc := Vehicle.STATIC_COMP - rest
-	var ra := wr + 0.05
 
 	var mb := MeshBuilder.new()
 	# Unterbau mit Radhäusern (konkaves Profil)
-	var p := PackedVector2Array()
-	p.append(Vector2(-hl, bottom + 0.08))
-	p.append(Vector2(-hl - 0.02, nose_h))
-	p.append(Vector2(-hl + 0.22, hood_h - 0.04))
-	p.append(Vector2(cowl_z, hood_h))
-	p.append(Vector2(deck_z, deck_h))
-	p.append(Vector2(hl - 0.18, deck_h - 0.03))
-	p.append(Vector2(hl, tail_h))
-	p.append(Vector2(hl, bottom + 0.08))
-	p.append(Vector2(hl - 0.12, bottom))
-	p.append_array(_arch(s["axle_r"], yc, ra, bottom))
-	p.append_array(_arch(s["axle_f"], yc, ra, bottom))
-	p.append(Vector2(-hl + 0.12, bottom))
+	var p := body_profile(type)
 	var ins := PackedFloat32Array()
 	for i in p.size():
 		var y := p[i].y
