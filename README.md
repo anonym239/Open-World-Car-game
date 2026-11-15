@@ -13,10 +13,13 @@ Das Repository enthält zwei Dinge:
 
 ## APK herunterladen & installieren
 
-1. **Actions → „Android APK“ → neuester grüner Lauf → Artefakt `ProjectVMobile-apk-<Nr>`** herunterladen (ZIP mit der APK).
-   Alternativ einen Tag `v*` pushen (z. B. `v0.1.0`): Dann erscheint die APK zusätzlich unter **Releases**.
-2. Auf dem Android-Gerät „Installation aus unbekannten Quellen“ für Browser/Dateimanager erlauben und die APK öffnen.
-3. Voraussetzungen: Android 7.0+ (API 24), **arm64**, Vulkan-fähige GPU empfohlen (fällt sonst auf OpenGL ES 3 zurück).
+**Am einfachsten: [Releases](https://github.com/anonym239/Open-World-Car-game/releases/latest)** → unter „Assets“ die Datei `ProjectVMobile-v….apk` direkt auf dem Handy herunterladen.
+
+Alternativ ist jeder Build als Artefakt verfügbar: **Actions → „Android APK“ → Lauf auswählen → Artefakt `ProjectVMobile-apk-<Nr>`** (ZIP mit der APK, GitHub-Login nötig).
+
+Installation: Auf dem Android-Gerät „Installation aus unbekannten Quellen“ für Browser/Dateimanager erlauben und die APK öffnen. Voraussetzungen: Android 7.0+ (API 24), **arm64**, Vulkan-fähige GPU empfohlen (sonst OpenGL-ES-3-Fallback).
+
+**Neues Release erstellen:** Versionsnummer in [`RELEASE_VERSION`](RELEASE_VERSION) erhöhen (z. B. `v0.2.0`) und pushen. Der Workflow baut die APK und legt Tag + Release automatisch an (einmal pro Version). Alternativ einen Tag `v*` pushen oder den Workflow manuell mit der Eingabe `release_tag` starten.
 
 Die APK ist **debug-signiert**. Für eine release-signierte APK diese Repository-Secrets anlegen:
 `ANDROID_KEYSTORE_BASE64` (Keystore als Base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`. Der Workflow nutzt sie dann automatisch.
