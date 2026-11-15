@@ -21,6 +21,9 @@ var _tier := -1
 
 
 func _ready() -> void:
+	if OS.get_cmdline_user_args().has("--validate"):
+		_validate_scripts()
+		return
 	WorldState.reset()
 	WorldMaterials.prewarm()
 	quality = QualityManager.new()
@@ -113,6 +116,36 @@ func _bootstrap() -> void:
 		_start_test("res://scripts/tests/smoke_test.gd")
 	elif GameConfig.render_test:
 		_start_test("res://scripts/tests/render_test.gd")
+
+
+## CI: jedes Skript mit aktiven Autoloads kompilieren (echte Fehler finden).
+func _validate_scripts() -> void:
+	var files: Array[String] = []
+	_collect("res://scripts", files)
+	var failed := 0
+	for f in files:
+		var s := load(f) as GDScript
+		if s == null or not s.can_instantiate():
+			failed += 1
+			printerr("VALIDATE FAIL " + f)
+		else:
+			print("VALIDATE ok   " + f)
+	for f in ["res://shaders/ground.gdshader", "res://shaders/building.gdshader", "res://shaders/car.gdshader",
+			"res://shaders/vc_wet.gdshader", "res://shaders/traffic_light.gdshader", "res://shaders/sky.gdshader",
+			"res://shaders/rain.gdshader", "res://shaders/screen_drops.gdshader"]:
+		if load(f) == null:
+			failed += 1
+			printerr("VALIDATE FAIL " + f)
+	print("VALIDATION %s (%d Fehler, %d Skripte)" % ["PASSED" if failed == 0 else "FAILED", failed, files.size()])
+	get_tree().quit(1 if failed > 0 else 0)
+
+
+func _collect(dir: String, out: Array[String]) -> void:
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd"):
+			out.append(dir.path_join(f))
+	for d in DirAccess.get_directories_at(dir):
+		_collect(dir.path_join(d), out)
 
 
 func _start_test(path: String) -> void:

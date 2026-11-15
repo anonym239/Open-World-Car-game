@@ -20,19 +20,13 @@ if grep -E "Parse Error|SCRIPT ERROR|Failed to load script|Compile Error|SHADER 
   FAIL=1
 fi
 
-echo "::group::GDScript-Prüfung (--check-only)"
-while IFS= read -r f; do
-  rel="res://${f#"$PROJECT_DIR"/}"
-  out=$("$GODOT" --headless --path "$PROJECT_DIR" --check-only --script "$rel" 2>&1)
-  code=$?
-  if [ $code -ne 0 ] || echo "$out" | grep -qE "Parse Error|SCRIPT ERROR|Compile Error"; then
-    echo "::error file=$f::GDScript-Fehler in $rel"
-    echo "$out" | grep -E "ERROR|Error|error" | head -n 20
-    FAIL=1
-  else
-    echo "ok  $rel"
-  fi
-done < <(find "$PROJECT_DIR/scripts" -name '*.gd' | sort)
+echo "::group::Skript-Validierung (alle Skripte mit Autoloads kompilieren)"
+"$GODOT" --headless --path "$PROJECT_DIR" -- --validate 2>&1 | tee validate.log
+if ! grep -q "VALIDATION PASSED" validate.log; then
+  echo "::error::Skript-Validierung fehlgeschlagen"
+  grep -E "SCRIPT ERROR|Parse Error|Compile Error|VALIDATE FAIL|at: " validate.log | head -n 60
+  FAIL=1
+fi
 echo "::endgroup::"
 
 exit $FAIL
