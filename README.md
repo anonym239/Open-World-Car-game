@@ -52,8 +52,8 @@ Im Pausemenü einstellbar: Lenkmodus, Stick-Typ, Grafikqualität (Auto/Niedrig/M
 | Job | Prüft |
 |---|---|
 | **Export APK** | Import, Kompilierung aller Skripte, Export, Signatur (`apksigner verify`) |
-| **Smoke-Test** | spielt headless durch: Laufen, Einsteigen, Beschleunigen, Driften, Bremsen, Aussteigen, KI-Auto stoppen, Car-Jacking mit Fahrerauswurf, Absprung, Regen, Nacht, Streaming, Passanten, Physik-Integrität |
-| **Render-Test** | rendert 4 Referenzszenen im echten Vulkan-Mobile-Renderer (Software-GPU), bricht bei Shader-Fehlern ab, lädt Screenshots als Artefakt hoch |
+| **Smoke-Test** | prüft Karosserie-Profile und spielt headless durch: Laufen, Einsteigen, Beschleunigen, Driften, Bremsen, Aussteigen, KI-Auto stoppen, Car-Jacking mit Fahrerauswurf, Absprung, Regen, Nacht, Streaming, Passanten, Physik-Integrität |
+| **Render-Test** | rendert 5 Referenzszenen (Tag, Regen-Dämmerung, Gewitter-Nacht im Auto, Cinematic-Kamera, Fahrzeug-Nahaufnahme) im echten Vulkan-Mobile-Renderer (Software-GPU), bricht bei Shader-Fehlern ab, lädt Screenshots als Artefakt hoch |
 
 ## Dokumentation (`docs/`)
 
