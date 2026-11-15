@@ -1,0 +1,88 @@
+; Engine configuration file.
+; Project V-Mobile – Open-World Vertical Slice (Godot 4.5, Mobile renderer)
+
+config_version=5
+
+[application]
+
+config/name="Project V-Mobile"
+config/description="Open-World Vertical Slice: Car-Jacking, Fahrzeugphysik, Touch-Steuerung, dynamisches Wetter."
+config/version="0.1.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.5", "Mobile")
+boot_splash/bg_color=Color(0.04, 0.05, 0.08, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
+
+[autoload]
+
+GameConfig="*res://scripts/autoload/game_config.gd"
+Events="*res://scripts/autoload/events.gd"
+InputHub="*res://scripts/autoload/input_hub.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+window/vsync/vsync_mode=1
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+pointing/emulate_mouse_from_touch=true
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="vehicles"
+3d_physics/layer_3="player"
+3d_physics/layer_4="npc"
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/max_physics_steps_per_frame=4
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+rendering_device/fallback_to_opengl3=true
+textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size.mobile=2048
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=2
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=2
+lights_and_shadows/positional_shadow/atlas_size.mobile=512
+occlusion_culling/use_occlusion_culling=true
+environment/defaults/default_clear_color=Color(0.42, 0.52, 0.64, 1)
+anti_aliasing/quality/msaa_3d=1
+
+[shader_globals]
+
+wetness={
+"type": "float",
+"value": 0.0
+}
+puddle_level={
+"type": "float",
+"value": 0.0
+}
+rain_intensity={
+"type": "float",
+"value": 0.0
+}
+night_factor={
+"type": "float",
+"value": 0.0
+}
+traffic_phase={
+"type": "float",
+"value": 0.0
+}
+wind_dir={
+"type": "vec2",
+"value": Vector2(0.3, 0.1)
+}

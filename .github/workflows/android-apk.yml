@@ -1,0 +1,204 @@
+name: Android APK
+
+# Baut bei jedem Push automatisch eine installierbare APK (arm64-v8a)
+# und lädt sie als Artefakt hoch. Tags "v*" erzeugen zusätzlich ein Release.
+# Parallel laufen ein headless Smoke-Test (Gameplay) und ein Render-Test
+# (Software-Vulkan, Screenshots als Artefakt).
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.5.1"
+  GODOT_RELEASE: "stable"
+  PROJECT_DIR: game
+
+jobs:
+  export-apk:
+    name: Export APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          release: ${{ env.GODOT_RELEASE }}
+
+      - name: Debug-Keystore (gecacht, damit Updates über alte Installationen gehen)
+        id: ks-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android-keystore
+          key: android-debug-keystore-v1
+
+      - name: Debug-Keystore erzeugen
+        if: steps.ks-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.android-keystore
+          keytool -genkeypair -v -keystore ~/.android-keystore/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Godot-Editor-Einstellungen (Android SDK, JDK, Keystore)
+        run: |
+          VER_MM=$(echo "$GODOT_VERSION" | cut -d. -f1,2)
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "Android SDK: $SDK"; ls "$SDK/build-tools" || true
+          mkdir -p ~/.config/godot
+          for f in "editor_settings-${VER_MM}.tres" "editor_settings-4.tres"; do
+            {
+              echo '[gd_resource type="EditorSettings" format=3]'
+              echo ''
+              echo '[resource]'
+              echo "export/android/java_sdk_path = \"$JAVA_HOME\""
+              echo "export/android/android_sdk_path = \"$SDK\""
+              echo "export/android/debug_keystore = \"$HOME/.android-keystore/debug.keystore\""
+              echo 'export/android/debug_keystore_user = "androiddebugkey"'
+              echo 'export/android/debug_keystore_pass = "android"'
+              echo 'export/android/force_system_user = false'
+              echo 'export/android/shutdown_adb_on_exit = true'
+            } > ~/.config/godot/$f
+          done
+          cat ~/.config/godot/editor_settings-${VER_MM}.tres
+
+      - name: Versionsnummer setzen (run_number -> versionCode)
+        run: |
+          sed -i "s/^version\/code=.*/version\/code=${{ github.run_number }}/" "$PROJECT_DIR/export_presets.cfg"
+          sed -i "s/^version\/name=.*/version\/name=\"0.1.${{ github.run_number }}\"/" "$PROJECT_DIR/export_presets.cfg"
+          grep -E "^version/" "$PROJECT_DIR/export_presets.cfg"
+
+      - name: Projekt importieren + Skripte prüfen
+        run: tools/ci_import.sh "$PROJECT_DIR"
+
+      - name: APK exportieren
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/build"
+          OUT="$GITHUB_WORKSPACE/build/ProjectVMobile.apk"
+          if [ -n "${KS_B64:-}" ] && [ -n "${KS_PASS:-}" ] && [ -n "${KS_ALIAS:-}" ]; then
+            echo "Release-Signatur mit Repository-Keystore"
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KS_ALIAS"
+            export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KS_PASS"
+            godot --headless --path "$PROJECT_DIR" --export-release "Android" "$OUT" 2>&1 | tee export.log
+          else
+            echo "Keine Release-Secrets -> Debug-signierte APK"
+            export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android-keystore/debug.keystore"
+            export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+            export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
+            godot --headless --path "$PROJECT_DIR" --export-debug "Android" "$OUT" 2>&1 | tee export.log
+          fi
+          test -s "$OUT" || { echo "::error::APK wurde nicht erzeugt"; exit 1; }
+          ls -la "$GITHUB_WORKSPACE/build"
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -n1)
+          "$BT/apksigner" verify --print-certs "$OUT" | head -n 5
+          "$BT/aapt2" dump badging "$OUT" | head -n 3 || true
+
+      - name: APK als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProjectVMobile-apk-${{ github.run_number }}
+          path: build/ProjectVMobile.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Release (nur bei Tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/ProjectVMobile.apk
+          generate_release_notes: true
+
+  smoke-test:
+    name: Gameplay Smoke-Test (headless)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          release: ${{ env.GODOT_RELEASE }}
+      - name: Projekt importieren + Skripte prüfen
+        run: tools/ci_import.sh "$PROJECT_DIR"
+      - name: Smoke-Test (Laufen, Einsteigen, Fahren, Car-Jacking, Wetter, Streaming)
+        run: |
+          set -o pipefail
+          timeout 900 godot --headless --path "$PROJECT_DIR" --fixed-fps 60 -- --smoke-test 2>&1 | tee smoke.log
+          code=${PIPESTATUS[0]}
+          if grep -E "SCRIPT ERROR|Parse Error" smoke.log; then
+            echo "::error::Laufzeit-Skriptfehler im Smoke-Test"
+            exit 1
+          fi
+          grep -q "SMOKE TEST PASSED" smoke.log || { echo "::error::Smoke-Test nicht bestanden (exit $code)"; exit 1; }
+      - name: Log hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-log-${{ github.run_number }}
+          path: smoke.log
+          if-no-files-found: ignore
+
+  render-test:
+    name: Render-Test (Software-Vulkan, Screenshots)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          release: ${{ env.GODOT_RELEASE }}
+      - name: Software-GPU (lavapipe/llvmpipe) + Xvfb
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mesa-vulkan-drivers libvulkan1 vulkan-tools xvfb libgl1-mesa-dri > /dev/null
+      - name: Projekt importieren + Skripte prüfen
+        run: tools/ci_import.sh "$PROJECT_DIR"
+      - name: Szenen rendern (Mobile-Renderer)
+        run: |
+          set -o pipefail
+          mkdir -p shots
+          xvfb-run -a -s "-screen 0 1280x720x24" timeout 1500 \
+            godot --path "$PROJECT_DIR" --rendering-driver vulkan --rendering-method mobile \
+            --resolution 960x540 -- --render-test --shots="$PWD/shots" 2>&1 | tee render.log
+          if grep -E "SHADER ERROR|SCRIPT ERROR|Parse Error" render.log; then
+            echo "::error::Shader-/Skriptfehler beim Rendern"
+            exit 1
+          fi
+          grep -q "RENDER TEST DONE" render.log || { echo "::error::Render-Test nicht abgeschlossen"; exit 1; }
+          ls -la shots
+      - name: Screenshots hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ github.run_number }}
+          path: |
+            shots/*.png
+            render.log
+          if-no-files-found: ignore

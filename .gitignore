@@ -1,0 +1,17 @@
+# Godot 4
+.godot/
+game/.godot/
+game/android/
+*.tmp
+# Build-Ausgaben
+build/
+*.apk
+*.aab
+*.keystore
+export_credentials.cfg
+# CI-Logs lokal
+import1.log
+import2.log
+smoke.log
+render.log
+shots/

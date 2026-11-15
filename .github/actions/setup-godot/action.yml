@@ -1,0 +1,47 @@
+name: Setup Godot
+description: Lädt den Godot-Editor (headless-fähig) und die Android-Export-Templates herunter (mit Cache).
+inputs:
+  version:
+    description: Godot-Version, z.B. 4.5.1
+    required: true
+  release:
+    description: Release-Kanal (stable, rc1, ...)
+    required: false
+    default: stable
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot + Templates
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/godot-bin
+          ~/.local/share/godot/export_templates
+        key: godot-${{ inputs.version }}-${{ inputs.release }}-android-v1
+
+    - name: Download Godot + Android templates
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE="https://github.com/godotengine/godot/releases/download/${{ inputs.version }}-${{ inputs.release }}"
+        mkdir -p ~/godot-bin
+        curl -fsSL --retry 5 --retry-delay 5 -o /tmp/godot.zip "$BASE/Godot_v${{ inputs.version }}-${{ inputs.release }}_linux.x86_64.zip"
+        unzip -q -o /tmp/godot.zip -d ~/godot-bin
+        mv ~/godot-bin/Godot_v${{ inputs.version }}-${{ inputs.release }}_linux.x86_64 ~/godot-bin/godot
+        chmod +x ~/godot-bin/godot
+        curl -fsSL --retry 5 --retry-delay 5 -o /tmp/templates.tpz "$BASE/Godot_v${{ inputs.version }}-${{ inputs.release }}_export_templates.tpz"
+        TPL_DIR=~/.local/share/godot/export_templates/${{ inputs.version }}.${{ inputs.release }}
+        mkdir -p "$TPL_DIR"
+        # Nur Android-Templates behalten -> kleiner Cache (~150 MB statt ~1 GB)
+        unzip -q -o /tmp/templates.tpz 'templates/android_*' 'templates/version.txt' -d /tmp/tpl
+        mv /tmp/tpl/templates/* "$TPL_DIR/"
+        ls -la "$TPL_DIR"
+        rm -f /tmp/godot.zip /tmp/templates.tpz
+
+    - name: Add Godot to PATH
+      shell: bash
+      run: |
+        echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+        "$HOME/godot-bin/godot" --headless --version
