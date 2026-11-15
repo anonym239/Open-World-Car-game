@@ -11,12 +11,17 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release-Tag (z. B. v0.1.0). Leer lassen = nur Build ohne Release."
+        required: false
+        default: ""
 
 permissions:
   contents: write
 
 concurrency:
-  group: apk-${{ github.ref }}
+  group: apk-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -81,9 +86,13 @@ jobs:
           cat ~/.config/godot/editor_settings-${VER_MM}.tres
 
       - name: Versionsnummer setzen (run_number -> versionCode)
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
         run: |
+          VERSION_NAME="0.1.${{ github.run_number }}"
+          if [ -n "$RELEASE_TAG" ]; then VERSION_NAME="${RELEASE_TAG#v}"; fi
           sed -i "s/^version\/code=.*/version\/code=${{ github.run_number }}/" "$PROJECT_DIR/export_presets.cfg"
-          sed -i "s/^version\/name=.*/version\/name=\"0.1.${{ github.run_number }}\"/" "$PROJECT_DIR/export_presets.cfg"
+          sed -i "s/^version\/name=.*/version\/name=\"$VERSION_NAME\"/" "$PROJECT_DIR/export_presets.cfg"
           grep -E "^version/" "$PROJECT_DIR/export_presets.cfg"
 
       - name: Projekt importieren + Skripte prüfen
@@ -127,12 +136,30 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Release (nur bei Tag v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: APK für Release benennen
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: cp build/ProjectVMobile.apk "build/ProjectVMobile-${RELEASE_TAG}.apk"
+
+      - name: GitHub-Release (Tag-Push v* oder manueller Start mit release_tag)
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          files: build/ProjectVMobile.apk
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Project V-Mobile ${{ inputs.release_tag || github.ref_name }}
+          files: build/ProjectVMobile-${{ inputs.release_tag || github.ref_name }}.apk
           generate_release_notes: true
+          body: |
+            Android-APK (arm64-v8a, Android 7.0+), automatisch gebaut von GitHub Actions.
+
+            **Installation:** APK unten unter „Assets" auf dem Handy herunterladen, öffnen und
+            „Installation aus unbekannten Quellen" für Browser/Dateimanager erlauben.
+
+            Inhalt: Car-Jacking-State-Machine, Raycast-Fahrzeugphysik, Touch-HUD (Stick/Tasten/Neigung),
+            KI-Verkehr mit Ampeln, Passanten, dynamisches Wetter (Nässe, Pfützen, Regen), Tag/Nacht, CSM-Schatten.
+            Debug-signiert, sofern keine Release-Keystore-Secrets hinterlegt sind.
 
   smoke-test:
     name: Gameplay Smoke-Test (headless)
